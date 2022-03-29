@@ -6,13 +6,9 @@ interface SongMethods {
 	toLine(): string
 }
 
-interface SongBase {
-	toLine(): string
-}
-
 // Schema interface
 
-interface Song extends SongBase {
+interface Song extends SongMethods {
 	track: string,
 	artist: string,
 	album: string,
@@ -26,7 +22,7 @@ interface Song extends SongBase {
 // Query helpers interface
 
 interface SongQueryHelpers {
-	byTags(...tags: string[]): mongoose.Query<Array<Song>, mongoose.Document<Song>> & SongQueryHelpers;
+	byTags(tags: string[]): mongoose.Query<Array<Song>, mongoose.Document<Song>> & SongQueryHelpers;
 	favorites(): mongoose.Query<Array<Song>, mongoose.Document<Song>> & SongQueryHelpers;
 }
 
@@ -63,7 +59,7 @@ const songSchema = new mongoose.Schema<Song, SongModel, SongMethods, SongQueryHe
 
 // Query helpers
 
-songSchema.query.byTags = function (this: SongModel, ...tags: string[]): mongoose.Query<any, mongoose.Document<Song>> & SongQueryHelpers {
+songSchema.query.byTags = function (this: SongModel, tags: string[]): mongoose.Query<any, mongoose.Document<Song>> & SongQueryHelpers {
 	if (tags) return this.find({ tags: { $all: tags } });
 	return this.find();
 };

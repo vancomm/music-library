@@ -1,11 +1,12 @@
 import inquirer, { ConfirmQuestion } from 'inquirer';
 
 function makeConfirmQuestion(name: string, message?: string): ConfirmQuestion {
-	return {
+	const question: ConfirmQuestion = {
 		type: 'confirm',
 		name,
 		message,
 	};
+	return question;
 }
 
 export async function askForBool(name: string, message?: string): Promise<boolean> {

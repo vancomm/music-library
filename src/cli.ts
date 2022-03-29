@@ -9,8 +9,14 @@ import { askForBool } from './inquire.js';
 
 /* 	
 	TODO:
-	- import/export (.JSON, .csv, plain text)
-	- tags (add, remove, filter)
+	- import/export 
+		- .JSON
+		- .csv
+		- plain text (?)
+	- tags 
+		- add
+		- remove
+		- filter
 	- output playlists (based on tags)
 */
 
@@ -31,18 +37,22 @@ program
 	.command('show')
 	.description('print your music library')
 	.option('-f, --favorite', 'show favorite tracks only')
-	.option('-p, --playlist <playlist>', 'choose playlist to print')
+	.option('-t, --tags <tags...>', 'tags to filter output')
 	.option('-o, --output <filepath>', 'redirect output to file')
 	.action(async (options) => {
 		const {
 			favorite,
-			playlist,
+			tags,
 			output } = options;
 
 		await mongoose.connect(uri);
-		// const list = await Song.find();
-		const list = await Song.find({ tags: { $all: playlist } });
+
+		const list = favorite
+			? await Song.find().byTags(tags).favorites()
+			: await Song.find().byTags(tags);
+
 		await mongoose.disconnect();
+
 		const lines = list.map((song) => song.toLine());
 		const message = lines.join('\n');
 

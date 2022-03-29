@@ -21,6 +21,7 @@
     "nodemon": "^2.0.15"
   },
   "dependencies": {
+    "chalk": "^5.0.1",
     "commander": "^9.1.0",
     "csv-parser": "^3.0.0",
     "inquirer": "^8.2.2",

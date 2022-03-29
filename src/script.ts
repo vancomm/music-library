@@ -8,7 +8,7 @@ const sourceLink = '/home/vancomm/music-library/__fixtures__/source.csv';
 async function run() {
 	// await loadFrom(sourceLink);
 	await mongoose.connect(uri);
-	const result = await Song.find().byTags('trap хата').favorites();
+	const result = await Song.find().byTags(['trap хата']).favorites();
 	await mongoose.disconnect();
 	const message = result.map((song) => song.toLine()).join('\n');
 	console.log(message);
