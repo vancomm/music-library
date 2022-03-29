@@ -1,15 +1,11 @@
-import mongoose from 'mongoose';
-import { Song } from './song.js';
-import csv from 'csv-parser';
 import fs from 'fs';
+import csv from 'csv-parser';
+import { Song } from '../db/schemas/song.js';
 
-const uri = 'mongodb://localhost/test';
-mongoose.connect(uri);
-
-export async function load(sourceLink: string) {
+export function parse(csvLink: string): Song[] {
 	const songs: Song[] = [];
 	const headers = ['track', 'artist', 'album', 'playlist', 'type', 'isrc'];
-	fs.createReadStream(sourceLink)
+	fs.createReadStream(csvLink)
 		.pipe(csv({ headers, skipLines: 1 }))
 		.on('data', (data) => {
 			const { track, artist, album, playlist, type, isrc } = data;
@@ -30,10 +26,6 @@ export async function load(sourceLink: string) {
 				});
 				songs.push(song);
 			}
-		})
-		.on('end', async () => {
-			console.log(songs.length);
-			await Song.insertMany(songs);
-			return mongoose.disconnect();
 		});
+	return songs;
 }
