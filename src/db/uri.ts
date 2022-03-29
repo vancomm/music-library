@@ -1,1 +1,1 @@
-export const uri = 'mongodb://localhost/test';
+export const uri = 'mongodb://localhost/music';
