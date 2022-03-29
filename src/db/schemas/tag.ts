@@ -33,6 +33,6 @@ tagSchema.pre<Tag>('save', function (next) {
 	next();
 });
 
-const Tag = mongoose.model<Tag>('Playlist', tagSchema);
+const Tag = mongoose.model<Tag>('Tag', tagSchema);
 
 export { Tag };

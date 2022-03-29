@@ -1,2 +1,3 @@
 export { range } from './range.js';
-export { getRandomBrightColor } from './random-color.js';
+export { generateColor } from './random-color.js';
+export { getRandomInt } from './random.js';

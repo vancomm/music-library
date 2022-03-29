@@ -13,7 +13,7 @@ interface Song extends SongMethods {
 	artist: string,
 	album: string,
 	favorite: boolean,
-	tags: string[],
+	tags: mongoose.Types.ObjectId[],
 	isrc: string,
 	createdAt: Date,
 	updatedAt: Date,
@@ -43,7 +43,10 @@ const songSchema = new mongoose.Schema<Song, SongModel, SongMethods, SongQueryHe
 		artist: String,
 		album: String,
 		favorite: Boolean,
-		tags: [String],
+		tags: [{
+			type: mongoose.Types.ObjectId,
+			ref: 'Tag',
+		}],
 		isrc: String,
 		createdAt: {
 			type: Date,

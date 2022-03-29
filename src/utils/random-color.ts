@@ -1,16 +1,12 @@
 import { range } from './range.js';
+import { getRandomInt } from './random.js';
 
-const getColorSum = (color: string) => {
-	const red = parseInt(color.slice(0, 2), 16);
-	const green = parseInt(color.slice(0, 2), 16);
-	const blue = parseInt(color.slice(0, 2), 16);
-	return red + green + blue;
-};
+export function generateColor(): string {
+	const color = range(3)
+		.map(() => getRandomInt(255))
+		.map((num) => Math.round((num + 255) / 2))
+		.map((num) => num.toString(16))
+		.join('');
 
-export function getRandomBrightColor(): string {
-	const THRESHOLD = 382;
-	const letters = '0123456789ABCDEF';
-	const color = range(6).map(() => letters[Math.floor(Math.random() * letters.length)]).join('');
-	if (getColorSum(color) < THRESHOLD) return getRandomBrightColor();
 	return `#${color}`;
 }
