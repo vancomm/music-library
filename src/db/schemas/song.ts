@@ -22,14 +22,16 @@ interface Song extends SongMethods {
 // Query helpers interface
 
 interface SongQueryHelpers {
-	byTags(tags: string[]): mongoose.Query<Array<Song>, mongoose.Document<Song>> & SongQueryHelpers;
+	byTrack(track: string | RegExp): mongoose.Query<Array<Song>, mongoose.Document<Song>> & SongQueryHelpers;
+	byArtist(artist: string | RegExp): mongoose.Query<Array<Song>, mongoose.Document<Song>> & SongQueryHelpers;
 	favorites(): mongoose.Query<Array<Song>, mongoose.Document<Song>> & SongQueryHelpers;
+	byTags(tags: string[], inverse?: boolean): mongoose.Query<Array<Song>, mongoose.Document<Song>> & SongQueryHelpers;
 }
 
-// Model interface
+// Static methods interface
 
 interface SongModel extends mongoose.Model<Song, SongQueryHelpers, SongMethods> {
-	playlist(...tags: string[]): Promise<Array<Song>>;
+	playlist(tags: string[]): Promise<Array<Song>>;
 	favorites(): Promise<Array<Song>>;
 }
 
@@ -59,13 +61,23 @@ const songSchema = new mongoose.Schema<Song, SongModel, SongMethods, SongQueryHe
 
 // Query helpers
 
-songSchema.query.byTags = function (this: SongModel, tags: string[]): mongoose.Query<any, mongoose.Document<Song>> & SongQueryHelpers {
-	if (tags) return this.find({ tags: { $all: tags } });
-	return this.find();
+songSchema.query.byTrack = function (this: SongModel, track: string | RegExp): mongoose.Query<any, mongoose.Document<Song>> & SongQueryHelpers {
+	return this.find({ track: { $regex: track } });
+};
+
+songSchema.query.byArtist = function (this: SongModel, artist: string | RegExp): mongoose.Query<any, mongoose.Document<Song>> & SongQueryHelpers {
+	return this.find({ artist: { $regex: artist } });
 };
 
 songSchema.query.favorites = function (this: SongModel): mongoose.Query<any, mongoose.Document<Song>> & SongQueryHelpers {
 	return this.find({ favorite: true });
+};
+
+songSchema.query.byTags = function (this: SongModel, tags: string[], inverse = false): mongoose.Query<any, mongoose.Document<Song>> & SongQueryHelpers {
+	if (tags) return inverse
+		? this.find({ tags: { $not: { $all: tags } } })
+		: this.find({ tags: { $all: tags } });
+	return this.find();
 };
 
 // Methods
@@ -76,7 +88,7 @@ songSchema.methods.toLine = function (this: Song): string {
 
 // Static methods
 
-songSchema.statics.playlist = async function (this: SongModel, ...tags: string[]): Promise<Array<Song>> {
+songSchema.statics.playlist = async function (this: SongModel, tags: string[]): Promise<Array<Song>> {
 	return (tags)
 		? this.where({ tags: { $all: tags } })
 		: this.where();
