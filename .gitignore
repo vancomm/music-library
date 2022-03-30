@@ -1,3 +1,4 @@
 node_modules
 built
 __fixtures__
+src/script.ts
