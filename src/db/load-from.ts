@@ -23,7 +23,7 @@ export async function loadFrom(sourceLink: string) {
 				const found = result.find((tag) => tag.name === name);
 				/* 
 					FIXME:
-						
+
 					¯\_(ツ)_/¯
 				*/
 				// eslint-disable-next-line @typescript-eslint/no-non-null-assertion

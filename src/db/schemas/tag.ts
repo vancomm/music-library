@@ -1,8 +1,15 @@
+import chalk from 'chalk';
 import mongoose from 'mongoose';
+
+// Methods and virtuals interface
+
+interface TagMethods {
+	toColoredLine(): string
+}
 
 // Schema interface
 
-interface Tag {
+interface Tag extends TagMethods {
 	name: string,
 	color: string,
 	createdAt: Date,
@@ -11,7 +18,7 @@ interface Tag {
 
 // Schema
 
-const tagSchema = new mongoose.Schema<Tag>(
+const tagSchema = new mongoose.Schema<Tag, mongoose.Model<Tag>, TagMethods>(
 	{
 		name: String,
 		color: String,
@@ -23,8 +30,17 @@ const tagSchema = new mongoose.Schema<Tag>(
 			type: Date,
 			default: () => Date.now(),
 		},
+	},
+	{
+		toJSON: { virtuals: true }
 	}
 );
+
+// Methods
+
+tagSchema.methods.toColoredLine = function (this: Tag) {
+	return chalk.hex(this.color).bold(this.name);
+};
 
 // Middleware
 

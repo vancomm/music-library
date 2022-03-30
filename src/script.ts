@@ -12,19 +12,21 @@ const sourceLink = '/home/vancomm/music-library/__fixtures__/source.csv';
 async function run() {
 	await mongoose.connect(uri);
 
-	await loadFrom(sourceLink);
+	// await loadFrom(sourceLink);
 
 	// const result = Song.find({ tags: { $size: { $gt: 0 } } });
 
 	// console.log(result.map((song) => song.toLine()).join('\n'));
 
 	// console.log(songs.length);
-
+	await Tag.find(); // HACK: без этого не работает вот это??????????? ↘
 	const result = await Song.find({ $where: 'this.tags.length > 1' }).populate<{ tags: Tag[] }>('tags');
 	const message = result.map((song) => {
 		const colored = song.tags.map(({ name, color }) => chalk.hex(color).bold(name)).join(' ');
 		return `${song.toLine()} ${colored}`;
 	}).join('\n');
+
+	// console.log(result.map((i) => i.tags));
 	console.log(message);
 
 	// const print = () => {

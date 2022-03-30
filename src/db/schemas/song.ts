@@ -25,7 +25,7 @@ interface SongQueryHelpers {
 	byTrack(track: string | RegExp): mongoose.Query<Array<Song>, mongoose.Document<Song>> & SongQueryHelpers;
 	byArtist(artist: string | RegExp): mongoose.Query<Array<Song>, mongoose.Document<Song>> & SongQueryHelpers;
 	favorites(): mongoose.Query<Array<Song>, mongoose.Document<Song>> & SongQueryHelpers;
-	byTags(tags: string[], inverse?: boolean): mongoose.Query<Array<Song>, mongoose.Document<Song>> & SongQueryHelpers;
+	byTags(ids: mongoose.Types.ObjectId[]): mongoose.Query<Array<Song>, mongoose.Document<Song>> & SongQueryHelpers;
 }
 
 // Static methods interface
@@ -76,10 +76,8 @@ songSchema.query.favorites = function (this: SongModel): mongoose.Query<any, mon
 	return this.find({ favorite: true });
 };
 
-songSchema.query.byTags = function (this: SongModel, tags: string[], inverse = false): mongoose.Query<any, mongoose.Document<Song>> & SongQueryHelpers {
-	if (tags) return inverse
-		? this.find({ tags: { $not: { $all: tags } } })
-		: this.find({ tags: { $all: tags } });
+songSchema.query.byTags = function (this: SongModel, ids: mongoose.Types.ObjectId[]): mongoose.Query<any, mongoose.Document<Song>> & SongQueryHelpers {
+	if (ids) return this.find({ tags: { $all: ids } });
 	return this.find();
 };
 
