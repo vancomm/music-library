@@ -1,4 +1,9 @@
 import mongoose from 'mongoose';
+import { Tag } from './tag.js';
+
+export type PopulatedSong = Song | (Omit<Song, 'tags'> & {
+	tags: Tag[];
+});
 
 // Methods and virtuals interface
 

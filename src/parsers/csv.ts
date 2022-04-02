@@ -1,4 +1,5 @@
 import fs from 'fs';
+import _ from 'lodash';
 import csv from 'csv-parser';
 import { Song } from '../db/schemas/song.js';
 
@@ -39,4 +40,23 @@ export async function parse(csvLink: string): Promise<[Song[], TagMap]> {
 			})
 			.on('end', () => resolve([songs, tagMap]));
 	});
+}
+
+export function toCSV(list: Song[], headers: string[], delimiter: string) {
+	const content = list
+		.map((song) => _.pick(song, headers))
+		.map((obj) => Object.values(obj))
+		.map((values) => values
+			.map((value) => String(value))
+			.map((value) => (value.includes(delimiter))
+				? `"${value}"`
+				: value)
+			.join(delimiter))
+		.join('\n');
+
+	const csv = headers
+		.join(delimiter)
+		.concat('\n')
+		.concat(content);
+	return csv;
 }
