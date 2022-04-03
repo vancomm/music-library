@@ -29,8 +29,8 @@ async function saveToFile(filepath: string, content: string) {
 		if (!confirm) return;
 	}
 
-	await fsp.writeFile(filepath, content);
-	console.log('Success!');
+	await fsp.writeFile(filepath, content, 'utf8');
+	console.log(`Successfully saved to ${filepath}!`);
 }
 
 program
@@ -46,18 +46,33 @@ program
 		await mongoose.disconnect();
 	});
 
+function makeFilename(tags: string[], favorite: boolean, extension: string) {
+	const name = tags.map((tag) => tag.replaceAll(' ', '-')).join('+');
+	return favorite
+		? name.concat('(favorites)').concat(extension)
+		: name.concat(extension);
+}
+
 program
 	.command('export')
-	.description('export music library to a file')
+	.description('export loaded music library to a .csv file')
 	.option('-f, --favorite', 'favorites only')
 	.option('-t, --tags <tags...>', 'filter by tags')
+	.option('-T, --use-tags', 'use tags as filename', false)
 	.option('-p, --path <filepath>', 'path to file', 'export.csv')
-	.option('-d, --delimiter <symbol>', 'delimiter for .csv file', ',')
-	.option('-H, --headers <headers...>', 'headers for .csv file (default values: "track", "artist", "album", "isrc")')
+	.option('-d, --delimiter <symbol>', 'delimiter symbol', ',')
+	.option('-N, --no-print-headers', 'disable printed headers')
+	.option('-H, --headers <headers...>', 'list of headers (default values: "track", "artist", "album", "isrc")')
 	.action(async (options) => {
+		// console.log(options);
+		// return;
+
 		const defaultHeaders = ['track', 'artist', 'album', 'isrc'];
 		const headers = options.headers ?? defaultHeaders;
-		const { favorite, tags, path, delimiter } = options;
+
+		const filepath = options.useTags ? makeFilename(options.tags, options.favorite, '.csv') : options.path;
+
+		const { favorite, tags, delimiter, printHeaders } = options;
 
 		await mongoose.connect(uri);
 
@@ -73,9 +88,14 @@ program
 
 		await mongoose.disconnect();
 
-		const output = toCSV(list, headers, delimiter);
+		if (list.length === 0) {
+			console.log('Nothing to export!');
+			return;
+		}
 
-		await saveToFile(path, output);
+		const output = toCSV(list, headers, printHeaders, delimiter);
+
+		await saveToFile(filepath, output);
 	});
 
 function makeLine(song: PopulatedSong, markFavorites: boolean, favoriteSymbol: string, includeTags: boolean) {

@@ -42,8 +42,14 @@ export async function parse(csvLink: string): Promise<[Song[], TagMap]> {
 	});
 }
 
-export function toCSV(list: Song[], headers: string[], delimiter: string) {
-	const content = list
+export function toCSV(list: Song[], headers: string[], printHeaders = true, delimiter = ',', trailingComma = true) {
+	const content = [];
+
+	content.push('\uFEFFdata:text/csv;charset=utf-8,%EF%BB%BF');
+
+	if (printHeaders) content.push(headers.join(delimiter));
+
+	const contentLines = list
 		.map((song) => _.pick(song, headers))
 		.map((obj) => Object.values(obj))
 		.map((values) => values
@@ -51,12 +57,16 @@ export function toCSV(list: Song[], headers: string[], delimiter: string) {
 			.map((value) => (value.includes(delimiter))
 				? `"${value}"`
 				: value)
-			.join(delimiter))
-		.join('\n');
+			.join(delimiter));
 
-	const csv = headers
-		.join(delimiter)
-		.concat('\n')
-		.concat(content);
+	content.push(...contentLines);
+
+	const csv = trailingComma
+		? content
+			.map((line) => line.concat(delimiter))
+			.join('\n')
+		: content
+			.join('\n');
+
 	return csv;
 }
