@@ -14,6 +14,7 @@ export async function parse(csvLink: string): Promise<[Song[], TagMap]> {
 			.pipe(csv({ headers, skipLines: 1 }))
 			.on('data', (data) => {
 				const { track, artist, album, playlist, type, isrc } = data;
+				if (artist === 'XTC') console.log(data);
 				const [existing] = songs.filter((s) => s.isrc === isrc);
 				if (existing) {
 					const index = songs.indexOf(existing);

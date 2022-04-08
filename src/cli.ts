@@ -3,102 +3,38 @@ import fsp from 'fs/promises';
 import mongoose from 'mongoose';
 import { program } from 'commander';
 import { uri } from './db/uri.js';
-import { loadFrom } from './db/load-from.js';
+import { load } from './db/load.js';
 import { PopulatedSong, Song } from './db/schemas/song.js';
 import { Tag } from './db/schemas/tag.js';
 import { askForBool } from './inquire.js';
 import { toCSV } from './parsers/csv.js';
+import chalk from 'chalk';
 
-/* 	
-	TODO:
-	- import/export 
-		- .JSON
-		- .csv
-		- plain text (?)
-	- tags 
-		- add
-		- remove
-		- filter
-	- output playlists (based on tags)
-*/
-
-async function saveToFile(filepath: string, content: string) {
-	const exists = fs.existsSync(filepath);
-	if (exists) {
-		const confirm = await askForBool('confirm', `${filepath} already exists! Are you sure you want to overwrite it?`);
-		if (!confirm) return;
-	}
-
-	await fsp.writeFile(filepath, content, 'utf8');
-	console.log(`Successfully saved to ${filepath}!`);
+function printColored(message: string, color: string) {
+	const colored = chalk.hex(color).bold(message);
+	console.log(colored);
 }
 
-program
-	.command('import')
-	.description('import music library from a file')
-	.argument('<filepath>', 'path to file')
-	.action(async (filepath) => {
-		await mongoose.connect(uri);
-		await loadFrom(filepath);
-		const count = await Song.countDocuments();
-		const message = `Imported ${count} songs`;
-		console.log(message);
-		await mongoose.disconnect();
-	});
+function success(message: string) {
+	const green = '#C1E1C1';
+	printColored(message, green);
+}
+
+function error(message: string) {
+	// const pink = '#F0B6D5';
+	const red = '#FF6961';
+	printColored(message, red);
+}
 
 function makeFilename(tags: string[], favorite: boolean, extension: string) {
-	const name = tags.map((tag) => tag.replaceAll(' ', '-')).join('+');
+	const name = tags?.map((tag) => tag.replaceAll(' ', '-')).join('+') ?? '';
+	const favoriteWord = tags?.length > 0 ? '(favorites)' : 'favorites';
 	return favorite
-		? name.concat('(favorites)').concat(extension)
+		? name.concat(favoriteWord).concat(extension)
 		: name.concat(extension);
 }
 
-program
-	.command('export')
-	.description('export loaded music library to a .csv file')
-	.option('-f, --favorite', 'favorites only')
-	.option('-t, --tags <tags...>', 'filter by tags')
-	.option('-T, --use-tags', 'use tags as filename', false)
-	.option('-p, --path <filepath>', 'path to file', 'export.csv')
-	.option('-d, --delimiter <symbol>', 'delimiter symbol', ',')
-	.option('-N, --no-print-headers', 'disable printed headers')
-	.option('-H, --headers <headers...>', 'list of headers (default values: "track", "artist", "album", "isrc")')
-	.action(async (options) => {
-		// console.log(options);
-		// return;
-
-		const defaultHeaders = ['track', 'artist', 'album', 'isrc'];
-		const headers = options.headers ?? defaultHeaders;
-
-		const filepath = options.useTags ? makeFilename(options.tags, options.favorite, '.csv') : options.path;
-
-		const { favorite, tags, delimiter, printHeaders } = options;
-
-		await mongoose.connect(uri);
-
-		const ids = await Tag.find({ name: { $in: tags } }).distinct('_id');
-
-		const list = tags
-			? favorite
-				? await Song.find().byTags(ids).favorites()
-				: await Song.find().byTags(ids)
-			: favorite
-				? await Song.find().favorites()
-				: await Song.find();
-
-		await mongoose.disconnect();
-
-		if (list.length === 0) {
-			console.log('Nothing to export!');
-			return;
-		}
-
-		const output = toCSV(list, headers, printHeaders, delimiter);
-
-		await saveToFile(filepath, output);
-	});
-
-function makeLine(song: PopulatedSong, markFavorites: boolean, favoriteSymbol: string, includeTags: boolean) {
+function makeLine(song: PopulatedSong, markFavorites: boolean, favoriteSymbol: string, includeTags: boolean, color: boolean) {
 	const line = [song.toLine()];
 
 	if (markFavorites && song.favorite) {
@@ -106,46 +42,71 @@ function makeLine(song: PopulatedSong, markFavorites: boolean, favoriteSymbol: s
 	}
 
 	if (includeTags) {
-		const tagStrings = song.tags
-			.map((tag) => (tag as Tag).toColoredLine());
+		const tagStrings = (song.tags as Tag[])
+			.map((tag) => color ? tag.toColoredLine() : tag.name);
 		line.push(...tagStrings);
 	}
 
 	return line.join(' ');
 }
 
+async function saveToFile(filepath: string, content: string, forceRewrite = false) {
+	const exists = fs.existsSync(filepath);
+	if (exists && !forceRewrite) {
+		const confirm = await askForBool('confirm', `${filepath} already exists! Are you sure you want to overwrite it?`);
+		if (!confirm) return;
+	}
+	await fsp.writeFile(filepath, content, 'utf8');
+	success(`Successfully saved to ${filepath}!`);
+}
+
 program
-	.command('show')
-	.description('print your music library')
-	.option('-f, --favorite', 'show favorite tracks only')
-	.option('-t, --tags <tags...>', 'tags to filter output')
-	.option('-o, --output <filepath>', 'redirect output to file')
-	.option('-F, --mark-favorites', 'append favorite tracks with a symbol')
-	.option('-S, --favorite-symbol [symbol]', 'symbol to mark favorites', '❤️')
-	.option('-T, --include-tags', 'include colored tags')
-	.action(async (options) => {
-		const {
-			favorite,
-			tags,
-			output,
-			markFavorites,
-			favoriteSymbol,
-			includeTags
-		} = options;
+	.argument('<string>')
+	.action((str) => {
+		success('echo: ' + str);
+	});
 
+program
+	.command('load')
+	.description('load music library from a file')
+	.argument('<filepath>', 'path to file')
+	.action(async (filepath) => {
 		await mongoose.connect(uri);
+		await load(filepath);
+		const count = await Song.countDocuments();
+		const message = `Loaded ${count} songs`;
+		success(message);
+		await mongoose.disconnect();
+	});
 
-		const ids = await Tag.find({ name: { $in: tags } }).distinct('_id');
+program
+	.command('export')
+	.description('export loaded music library to a .csv file')
+	.option('-f, --favorite', 'include favorites only')
+	.option('-t, --tags <tags...>', 'filter by tags')
+	.option('-T, --use-tags', 'use tags as filename (this option overrides --path!)')
+	.option('-p, --path <filepath>', 'set path to file', 'export.csv')
+	.option('-y, --force-rewrite', 'skip confirmation before rewriting existing file')
+	.option('-d, --delimiter <symbol>', 'set delimiter symbol', ',')
+	.option('-N, --no-print-headers', 'remove headers from output file')
+	.option('-H, --headers <headers...>', 'list of headers (default values: "track", "artist", "album", "isrc")')
+	.action(async (options) => {
+		try {
+			// console.log(options);
+			// return;
 
-		const list = includeTags
-			? tags
-				? favorite
-					? await Song.find().byTags(ids).favorites().populate<{ tags: Tag[] }>('tags')
-					: await Song.find().byTags(ids).populate<{ tags: Tag[] }>('tags')
-				: favorite
-					? await Song.find().favorites().populate<{ tags: Tag[] }>('tags')
-					: await Song.find().populate<{ tags: Tag[] }>('tags')
-			: tags
+			const defaultHeaders = ['track', 'artist', 'album', 'isrc'];
+			const headers = options.headers ?? defaultHeaders;
+
+			const filepath = options.useTags ? makeFilename(options.tags, options.favorite, '.csv') : options.path;
+
+			const { favorite, tags, delimiter, printHeaders, forceRewrite } = options;
+
+			await mongoose.connect(uri);
+
+			const ids = await Tag.find({ name: { $in: tags } }).distinct('_id');
+
+			const list = tags
 				? favorite
 					? await Song.find().byTags(ids).favorites()
 					: await Song.find().byTags(ids)
@@ -153,18 +114,81 @@ program
 					? await Song.find().favorites()
 					: await Song.find();
 
-		await mongoose.disconnect();
+			if (list.length === 0) {
+				error('Nothing to export!');
+				return;
+			}
 
-		const message = list
-			.map((song) => makeLine(song, markFavorites, favoriteSymbol, includeTags))
-			.join('\n');
+			const output = toCSV(list, headers, printHeaders, delimiter);
 
-		if (!output) {
-			console.log(message);
-			return;
+			await saveToFile(filepath, output, forceRewrite);
 		}
+		catch (err) {
+			// console.error((err as Error).message);
+			error(err as string);
+		}
+		finally {
+			await mongoose.disconnect();
+		}
+	});
 
-		await saveToFile(output, message);
+
+
+program
+	.command('find')
+	.description('find songs in your music library')
+	.option('-f, --favorite', 'favorite tracks only')
+	.option('-n, --name <name>', 'search by track name')
+	.option('-a, --artist <artist>', 'search by artist')
+	.option('-A, --album <album>', 'search by album')
+	.option('-t, --tags <tags...>', 'search by tags')
+	.option('-i, --include-tags', 'include colored tags')
+	.option('-T, --find-tags', 'find all tags in the library')
+	.option('-m, --mark-favorites', 'append favorite tracks with a symbol')
+	.option('-S, --favorite-symbol [symbol]', 'symbol to mark favorites', '❤️')
+	.option('-N, --no-color', 'do not color tags')
+	.action(async (opts) => {
+		try {
+			await mongoose.connect(uri);
+
+			if (opts.findTags) {
+				const savedTags = await Tag.find();
+				const message = savedTags.map((tag) => opts.color ? tag.toColoredLine() : tag.name).join('\n');
+				console.log(message);
+				await mongoose.disconnect();
+				return;
+			}
+
+			const found = await Tag.find({ name: { $in: opts.tags } }).distinct('_id');
+
+			if (opts.tags && found.length === 0) {
+				error('Your query yielded no result!');
+				return;
+			}
+
+			const ids = found;
+
+			const list = opts.includeTags
+				? opts.favorite
+					? await Song.find().byName(opts.name).byArtist(opts.artist).byAlbum(opts.album).byTags(ids).favorites().populate<{ tags: Tag[] }>('tags')
+					: await Song.find().byName(opts.name).byArtist(opts.artist).byAlbum(opts.album).byTags(ids).populate<{ tags: Tag[] }>('tags')
+				: opts.favorite
+					? await Song.find().byName(opts.name).byArtist(opts.artist).byAlbum(opts.album).byTags(ids).favorites()
+					: await Song.find().byName(opts.name).byArtist(opts.artist).byAlbum(opts.album).byTags(ids);
+
+			const message = list
+				.map((song) => makeLine(song, opts.markFavorites, opts.favoriteSymbol, opts.includeTags, opts.color))
+				.join('\n');
+
+			console.log(message);
+		}
+		catch (err) {
+			// console.error((err as Error).message);
+			error(err as string);
+		}
+		finally {
+			await mongoose.disconnect();
+		}
 	});
 
 program.parse();

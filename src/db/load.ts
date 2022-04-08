@@ -3,8 +3,10 @@ import { parse } from '../parsers/csv.js';
 import { Tag } from './schemas/tag.js';
 import { generateColor } from '../utils/random-color.js';
 
-export async function loadFrom(sourceLink: string) {
+export async function load(sourceLink: string) {
 	const [songs, tagMap] = await parse(sourceLink);
+
+	// console.log(tagMap);
 
 	const uniqueTags = [...new Set(Object.values(tagMap).map((set) => [...set]).flat())];
 
@@ -23,7 +25,6 @@ export async function loadFrom(sourceLink: string) {
 				const found = result.find((tag) => tag.name === name);
 				/* 
 					FIXME:
-
 					¯\_(ツ)_/¯
 				*/
 				// eslint-disable-next-line @typescript-eslint/no-non-null-assertion

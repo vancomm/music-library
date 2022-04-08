@@ -27,8 +27,9 @@ interface Song extends SongMethods {
 // Query helpers interface
 
 interface SongQueryHelpers {
-	byTrack(track: string | RegExp): mongoose.Query<Array<Song>, mongoose.Document<Song>> & SongQueryHelpers;
+	byName(name: string | RegExp): mongoose.Query<Array<Song>, mongoose.Document<Song>> & SongQueryHelpers;
 	byArtist(artist: string | RegExp): mongoose.Query<Array<Song>, mongoose.Document<Song>> & SongQueryHelpers;
+	byAlbum(album: string | RegExp): mongoose.Query<Array<Song>, mongoose.Document<Song>> & SongQueryHelpers;
 	favorites(): mongoose.Query<Array<Song>, mongoose.Document<Song>> & SongQueryHelpers;
 	byTags(ids: mongoose.Types.ObjectId[]): mongoose.Query<Array<Song>, mongoose.Document<Song>> & SongQueryHelpers;
 }
@@ -69,21 +70,29 @@ const songSchema = new mongoose.Schema<Song, SongModel, SongMethods, SongQueryHe
 
 // Query helpers
 
-songSchema.query.byTrack = function (this: SongModel, track: string | RegExp): mongoose.Query<any, mongoose.Document<Song>> & SongQueryHelpers {
-	return this.find({ track: { $regex: track } });
-};
-
-songSchema.query.byArtist = function (this: SongModel, artist: string | RegExp): mongoose.Query<any, mongoose.Document<Song>> & SongQueryHelpers {
-	return this.find({ artist: { $regex: artist } });
-};
-
 songSchema.query.favorites = function (this: SongModel): mongoose.Query<any, mongoose.Document<Song>> & SongQueryHelpers {
 	return this.find({ favorite: true });
 };
 
+songSchema.query.byName = function (this: SongModel, name: string | RegExp): mongoose.Query<any, mongoose.Document<Song>> & SongQueryHelpers {
+	if (!name) return this.find();
+	return this.find({ track: { $regex: RegExp(name, 'i') } });
+};
+
+songSchema.query.byArtist = function (this: SongModel, artist: string | RegExp): mongoose.Query<any, mongoose.Document<Song>> & SongQueryHelpers {
+	if (!artist) return this.find();
+	return this.find({ artist: { $regex: RegExp(artist, 'i') } });
+};
+
+songSchema.query.byAlbum = function (this: SongModel, album: string | RegExp): mongoose.Query<any, mongoose.Document<Song>> & SongQueryHelpers {
+	if (!album) return this.find();
+	return this.find({ artist: { $regex: RegExp(album, 'i') } });
+};
+
 songSchema.query.byTags = function (this: SongModel, ids: mongoose.Types.ObjectId[]): mongoose.Query<any, mongoose.Document<Song>> & SongQueryHelpers {
-	if (ids) return this.find({ tags: { $all: ids } });
-	return this.find();
+	if (!ids.length) return this.find();
+	return this.find({ tags: { $all: ids } });
+
 };
 
 // Methods
